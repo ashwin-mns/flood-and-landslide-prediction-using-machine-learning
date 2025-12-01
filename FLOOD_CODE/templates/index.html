@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-color: #e0e6ef;
+        --success-color: #198754;
+        --warning-color: #ffc107;
+        --danger-color: #dc3545;
+        --info-color: #0dcaf0;
+    }
+
+    /* Hero Section with Background Carousel */
+    .hero-section {
+        position: relative;
+        overflow: hidden;
+        padding: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+    }
+
+    .hero-bg-carousel {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0; /* Lower z-index to be behind content */
+    }
+
+    .hero-bg-carousel .carousel-item {
+        height: 100%;
+        width: 100%;
+    }
+
+    .hero-bg-carousel .carousel-item img {
+        object-fit: cover;
+        width: 100%;
+        height: 100%;
+        opacity: 1;
+        filter: brightness(0.7) contrast(1.2);
+    }
+
+    .hero-bg-carousel .carousel-item.active img {
+        animation: kenburns 20s infinite alternate;
+    }
+
+    @keyframes kenburns {
+        0% {
+            transform: scale(1);
+        }
+        100% {
+            transform: scale(1.1);
+        }
+    }
+
+    .hero-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.3), rgba(10, 88, 202, 0.4));
+        z-index: 1; /* Between background and content */
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2; /* Highest z-index to be on top */
+        padding: 100px 0;
+        width: 100%;
+    }
+
+    /* Custom Animations */
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+
+    .floating {
+        animation: float 3s ease-in-out infinite;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .hero-section {
+            text-align: center;
+        }
+        
+        .display-4 {
+            font-size: 2.5rem;
+        }
+        
+        .hero-content {
+            padding: 80px 0;
+        }
+    }
+</style>
+
+<!-- Hero Section with Background Carousel -->
+<section class="hero-section text-white">
+    <!-- Background Carousel -->
+    <div id="heroCarousel" class="hero-bg-carousel carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="5000">
+        <div class="carousel-inner h-100">
+            <div class="carousel-item active h-100">
+                <img src="https://cdn.dribbble.com/userupload/21441992/file/original-92c130481d2a8e5f8546641775230cf2.gif" class="d-block w-100" alt="Flood Detection System">
+            </div>
+            <div class="carousel-item h-100">
+                <img src="https://clipart-library.com/img/1122240.gif" class="d-block w-100" alt="Water Monitoring">
+            </div>
+            <div class="carousel-item h-100">
+                <img src="https://media1.giphy.com/media/v1.Y2lkPTZjMDliOTUyZG9jbXVqbHdkc2U4eDR5eWNqdmFsc2VvNzA4cnJnZG5pb2J1MXpqOSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/WK6WPyrCTJGyk/giphy.gif" class="d-block w-100" alt="Rainfall Analysis">
+            </div>
+        </div>
+    </div>
+    
+    <!-- Overlay for better text readability -->
+    <div class="hero-overlay"></div>
+    
+    <!-- Content -->
+    <div class="container hero-content">
+        <div class="row align-items-center">
+            <div class="col-lg-6 animate__animated animate__fadeInLeft">
+                <h1 class="display-4 fw-bold mb-4">Flood & Landlslide Detection Using Machine Learning</h1>
+                <p class="lead mb-4">Advanced AI-powered system to predict flood conditions based on water level, rainfall, and soil moisture data.</p>
+                {% if not session.user_id %}
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">Get Started</a>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg">Login</a>
+                </div>
+                {% else %}
+                <a href="{{ url_for('input_page') }}" class="btn btn-light btn-lg">Make Prediction</a>
+                {% endif %}
+            </div>
+            
+        </div>
+    </div>
+</section>
+
+<!-- Rest of your sections remain the same -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-5 fw-bold">How It Works</h2>
+            <p class="lead">Our system analyzes multiple environmental factors to predict flood conditions</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm animate__animated animate__fadeInUp">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon bg-primary rounded-circle mx-auto mb-3">
+                            <i class="fas fa-tint fa-2x text-white"></i>
+                        </div>
+                        <h5 class="card-title">Water Level Monitoring</h5>
+                        <p class="card-text">Real-time tracking of water levels in rivers and reservoirs to detect potential overflow risks.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm animate__animated animate__fadeInUp animate__delay-1s">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon bg-success rounded-circle mx-auto mb-3">
+                            <i class="fas fa-cloud-rain fa-2x text-white"></i>
+                        </div>
+                        <h5 class="card-title">Rainfall Analysis</h5>
+                        <p class="card-text">Comprehensive rainfall data analysis to predict precipitation impact on flood conditions.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm animate__animated animate__fadeInUp animate__delay-2s">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon bg-warning rounded-circle mx-auto mb-3">
+                            <i class="fas fa-seedling fa-2x text-white"></i>
+                        </div>
+                        <h5 class="card-title">Soil Moisture Sensing</h5>
+                        <p class="card-text">Advanced soil moisture monitoring to assess ground saturation and runoff potential.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Prediction Types -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-5 fw-bold">Prediction Categories</h2>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card prediction-card border-success h-100 animate__animated animate__zoomIn">
+                    <div class="card-body text-center p-4">
+                        <div class="prediction-icon text-success mb-3">
+                            <i class="fas fa-check-circle fa-3x"></i>
+                        </div>
+                        <h4 class="card-title text-success">No Flood</h4>
+                        <p class="card-text">Safe conditions with normal water levels and rainfall patterns.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card prediction-card border-warning h-100 animate__animated animate__zoomIn animate__delay-1s">
+                    <div class="card-body text-center p-4">
+                        <div class="prediction-icon text-warning mb-3">
+                            <i class="fas fa-exclamation-triangle fa-3x"></i>
+                        </div>
+                        <h4 class="card-title text-warning">Suspect</h4>
+                        <p class="card-text">Potential risk conditions that require monitoring and caution.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card prediction-card border-danger h-100 animate__animated animate__zoomIn animate__delay-2s">
+                    <div class="card-body text-center p-4">
+                        <div class="prediction-icon text-danger mb-3">
+                            <i class="fas fa-exclamation-circle fa-3x"></i>
+                        </div>
+                        <h4 class="card-title text-danger">Flood</h4>
+                        <p class="card-text">High risk conditions indicating potential flooding events.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    // Initialize the background carousel
+    document.addEventListener('DOMContentLoaded', function() {
+        var heroCarousel = document.getElementById('heroCarousel');
+        var carousel = new bootstrap.Carousel(heroCarousel, {
+            interval: 5000,
+            wrap: true,
+            pause: false
+        });
+    });
+</script>
+{% endblock %}

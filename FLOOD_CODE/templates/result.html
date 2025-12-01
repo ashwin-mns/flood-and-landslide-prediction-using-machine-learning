@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .result-card {
+        min-height: 400px;
+    }
+    .feature-icon {
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <div class="card shadow-lg border-0 result-card animate__animated animate__fadeInUp">
+                {% if prediction %}
+                    <!-- Display prediction result -->
+                    {% set icon_class, title_class, title_text, message, badge_class, alert_class = 
+                        ('fas fa-check-circle text-success', 'text-success', 'NO FLOOD DETECTED', 
+                         'Conditions are safe. No immediate flood risk detected.', 'bg-success', 'alert-success') if prediction == 'no flood' 
+                        else ('fas fa-exclamation-triangle text-warning', 'text-warning', 'SUSPECT CONDITIONS', 
+                              'Potential risk detected. Monitor the situation closely.', 'bg-warning', 'alert-warning') if prediction == 'suspect'
+                        else ('fas fa-exclamation-circle text-danger', 'text-danger', 'FLOOD DETECTED', 
+                              'High flood risk detected. Take necessary precautions immediately.', 'bg-danger', 'alert-danger')
+                    %}
+                    
+                    <div class="card-header {{ title_class }} bg-transparent text-center py-4 border-0">
+                        <i class="{{ icon_class }} fa-5x mb-3"></i>
+                        <h1 class="display-5 fw-bold mb-3">{{ title_text }}</h1>
+                        <h5 class=" fw-bold mb-3">{{ landslide_alert }}</h5>
+                        <p class="lead mb-0">{{ message }}</p>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row mb-4">
+                            <div class="col-md-4 mb-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body text-center p-3">
+                                        <div class="feature-icon bg-primary rounded-circle mx-auto mb-2">
+                                            <i class="fas fa-ruler-vertical fa-2x text-white"></i>
+                                        </div>
+                                        <h6 class="card-title text-muted">Water Level</h6>
+                                        <h3 class="text-primary fw-bold">{{ water_level }}</h3>
+                                        <small class="text-muted">units</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body text-center p-3">
+                                        <div class="feature-icon bg-info rounded-circle mx-auto mb-2">
+                                            <i class="fas fa-cloud-rain fa-2x text-white"></i>
+                                        </div>
+                                        <h6 class="card-title text-muted">Rain Intensity</h6>
+                                        <h3 class="text-info fw-bold">{{ rain }}</h3>
+                                        <small class="text-muted">sensor value</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-body text-center p-3">
+                                        <div class="feature-icon bg-warning rounded-circle mx-auto mb-2">
+                                            <i class="fas fa-seedling fa-2x text-white"></i>
+                                        </div>
+                                        <h6 class="card-title text-muted">Soil Moisture</h6>
+                                        <h3 class="text-warning fw-bold">{{ soil_moisture }}</h3>
+                                        <small class="text-muted">sensor value</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if probability %}
+                        <div class="mb-4">
+                            <h5 class="text-center mb-3">Prediction Confidence</h5>
+                            <div class="progress mb-2" style="height: 30px;">
+                                <div class="progress-bar {{ badge_class }} progress-bar-striped" 
+                                     style="width: {{ probability * 100 }}%">
+                                    {{ "%.1f"|format(probability * 100) }}%
+                                </div>
+                            </div>
+                            <p class="text-center text-muted small">Model confidence level</p>
+                        </div>
+                        {% endif %}
+
+                        <div class="alert {{ alert_class }} border-0">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-info-circle fa-2x me-3"></i>
+                                <div>
+                                    <h5 class="alert-heading mb-2">Recommendation</h5>
+                                    <p class="mb-0">
+                                        {% if prediction == 'no flood' %}
+                                            Continue normal monitoring. Conditions are stable and no immediate action is required.
+                                        {% elif prediction == 'suspect' %}
+                                            Increase monitoring frequency, prepare contingency plans, and stay alert for any changes in conditions.
+                                        {% elif prediction == 'flood' %}
+                                            Activate emergency protocols immediately. Consider evacuation and take all necessary safety precautions.
+                                        {% else %}
+                                            Review sensor data and system status. Contact support if the issue persists.
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <!-- No prediction data available -->
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-exclamation-triangle fa-5x text-warning mb-3"></i>
+                        <h4 class="text-warning">No Prediction Data Found</h4>
+                        <p class="text-muted mb-4">Please make a prediction first to see the results.</p>
+                        <a href="{{ url_for('input_page') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Prediction
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="text-center mt-4">
+                <a href="{{ url_for('input_page') }}" class="btn btn-primary btn-lg me-3">
+                    <i class="fas fa-redo me-2"></i>New Prediction
+                </a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-lg">
+                    <i class="fas fa-history me-2"></i>View History
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

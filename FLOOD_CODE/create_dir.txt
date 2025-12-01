@@ -1,0 +1,51 @@
+import os
+
+# Root directory name
+base_dir = "flood-detection-app"
+
+# Folder structure and files to create
+structure = {
+    base_dir: [
+        "app.py",
+        "models.py",
+        "database.db",
+        {"outputs": [
+            "best_model.joblib",
+            "scaler.joblib",
+            "label_encoder.joblib"
+        ]},
+        {"static": [
+            {"css": ["style.css"]},
+            {"js": ["script.js"]},
+            {"images": ["slide1.jpg", "slide2.jpg", "slide3.jpg"]}
+        ]},
+        {"templates": [
+            "base.html",
+            "index.html",
+            "login.html",
+            "register.html",
+            "dashboard.html",
+            "input.html",
+            "result.html"
+        ]}
+    ]
+}
+
+def create_structure(base_path, items):
+    """Recursively create directories and files."""
+    for item in items:
+        if isinstance(item, dict):  # it's a folder
+            for folder_name, sub_items in item.items():
+                folder_path = os.path.join(base_path, folder_name)
+                os.makedirs(folder_path, exist_ok=True)
+                create_structure(folder_path, sub_items)
+        else:
+            file_path = os.path.join(base_path, item)
+            # Create empty file if not exists
+            open(file_path, 'a').close()
+
+
+# Create the structure
+create_structure(".", structure[base_dir])
+
+print(f"\n✅ Folder structure for '{base_dir}' created successfully!")

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0 animate__animated animate__fadeInUp">
+                <div class="card-header bg-info text-white text-center py-4">
+                    <h3 class="mb-0"><i class="fas fa-calculator me-2"></i>Flood Prediction Input</h3>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Remove JavaScript and use direct form action -->
+                    <form method="POST" action="{{ url_for('predict') }}">
+                        <div class="mb-4">
+                            <label for="water_level" class="form-label fw-bold">Water Level (0-20)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-ruler-vertical"></i></span>
+                                <input type="number" class="form-control" id="water_level" name="water_level" 
+                                       min="0" max="20" step="0.1" value="{{water}}" required>
+                            </div>
+                            <div class="form-text">Enter water level measurement between 0 and 20 units</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="rain" class="form-label fw-bold">Rain Sensor Value (0-4095)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-cloud-rain"></i></span>
+                                <input type="number" class="form-control" id="rain" name="rain" 
+                                       min="0" max="4095" step="1" value="{{rain}}" required>
+                            </div>
+                            <div class="form-text">Enter rain sensor reading between 0 and 4095</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="soil_moisture" class="form-label fw-bold">Soil Moisture (0-4095)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-seedling"></i></span>
+                                <input type="number" class="form-control" id="soil_moisture" name="soil_moisture" 
+                                       min="0" max="4095" step="1" value="{{soil}}" required>
+                            </div>
+                            <div class="form-text">Enter soil moisture reading between 0 and 4095</div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-info btn-lg">
+                                <i class="fas fa-bolt me-2"></i>Predict Flood Condition
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quick Guide -->
+            <div class="card mt-4 border-0 bg-light">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-info-circle me-2"></i>Quick Guide</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success me-2"></i>Normal water levels: 0-5 units</li>
+                        <li><i class="fas fa-exclamation-triangle text-warning me-2"></i>Moderate levels: 5-10 units</li>
+                        <li><i class="fas fa-exclamation-circle text-danger me-2"></i>High levels: 10+ units</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
