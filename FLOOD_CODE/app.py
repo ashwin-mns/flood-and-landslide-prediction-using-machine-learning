@@ -9,12 +9,17 @@ bot=telepot.Bot("8274686037:AAH67rN9oiXYV00eGCsPtNjQzbcjwvjteBo")
 ch_id="893804937"
 
 
+
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'
 
+# Get the directory of the current file (absolute path)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, 'database.db')
+
 # Database initialization
 def init_db():
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
     # Create users table
@@ -47,20 +52,27 @@ def init_db():
     conn.close()
 
 
-MODEL_PATH = "outputs/best_model.joblib"
-SCALER_PATH = "outputs/scaler.joblib"
-ENCODER_PATH = "outputs/label_encoder.joblib"
+MODEL_PATH = os.path.join(BASE_DIR, "outputs", "best_model.joblib")
+SCALER_PATH = os.path.join(BASE_DIR, "outputs", "scaler.joblib")
+ENCODER_PATH = os.path.join(BASE_DIR, "outputs", "label_encoder.joblib")
 
-model = joblib.load(MODEL_PATH)
-scaler = joblib.load(SCALER_PATH)
-label_encoder = joblib.load(ENCODER_PATH)
+# Load models with error handling
+try:
+    model = joblib.load(MODEL_PATH)
+    scaler = joblib.load(SCALER_PATH)
+    label_encoder = joblib.load(ENCODER_PATH)
+except Exception as e:
+    print(f"Error loading models: {e}")
+    model = None
+    scaler = None
+    label_encoder = None
     
 
 
 
 # Database helper functions
 def get_db_connection():
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
