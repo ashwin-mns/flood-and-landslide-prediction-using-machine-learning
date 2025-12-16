@@ -81,6 +81,7 @@ Open your web browser and go to:
 - **Dashboard**: View your past predictions.
 
 ## Configuration
+demo link : https://ashwin098.pythonanywhere.com/
 
 - **Telegram Bot**: The bot token is configured in `app.py`.
 - **ThingSpeak**: API keys for fetching data are configured in `app.py`.
