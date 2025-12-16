@@ -10,85 +10,93 @@ ch_id="893804937"
 
 
 
-app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'
 
 # Get the directory of the current file (absolute path)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'database.db')
 
-# Database initialization
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    
-    # Create users table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Create predictions table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS predictions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            water_level REAL NOT NULL,
-            rain REAL NOT NULL,
-            soil_moisture REAL NOT NULL,
-            prediction TEXT NOT NULL,
-            probability REAL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+app = Flask(__name__)
+app.secret_key = 'your_secret_key_here'
 
+# Global variables for lazy loading
+bot = None
+model = None
+scaler = None
+label_encoder = None
 
-MODEL_PATH = os.path.join(BASE_DIR, "outputs", "best_model.joblib")
-SCALER_PATH = os.path.join(BASE_DIR, "outputs", "scaler.joblib")
-ENCODER_PATH = os.path.join(BASE_DIR, "outputs", "label_encoder.joblib")
+def get_bot():
+    global bot
+    if bot is None:
+        try:
+            bot = telepot.Bot("8274686037:AAH67rN9oiXYV00eGCsPtNjQzbcjwvjteBo")
+        except Exception as e:
+            print(f"Bot initialization failed: {e}")
+    return bot
 
-# Load models with error handling
-try:
-    model = joblib.load(MODEL_PATH)
-    scaler = joblib.load(SCALER_PATH)
-    label_encoder = joblib.load(ENCODER_PATH)
-except Exception as e:
-    print(f"Error loading models: {e}")
-    model = None
-    scaler = None
-    label_encoder = None
-    
+def load_models():
+    global model, scaler, label_encoder
+    if model is None:
+        try:
+            MODEL_PATH = os.path.join(BASE_DIR, "outputs", "best_model.joblib")
+            SCALER_PATH = os.path.join(BASE_DIR, "outputs", "scaler.joblib")
+            ENCODER_PATH = os.path.join(BASE_DIR, "outputs", "label_encoder.joblib")
+            
+            if os.path.exists(MODEL_PATH):
+                model = joblib.load(MODEL_PATH)
+                scaler = joblib.load(SCALER_PATH)
+                label_encoder = joblib.load(ENCODER_PATH)
+                print("Models loaded successfully.")
+            else:
+                print(f"Model files not found at {MODEL_PATH}")
+        except Exception as e:
+            print(f"Error loading models: {e}")
 
-
+# Load models on startup (non-blocking)
+load_models()
 
 # Database helper functions
 def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    if not os.path.exists(DB_PATH):
+        # Fallback for Vercel if DB missing (to prevent crash, though logic will fail)
+        print("Database file not found!")
+        return None
+        
+    try:
+        # Attempt to connect in read-only mode if possible, or standard
+        conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.OperationalError:
+         # Fallback to standard connect if uri mode fails or other issue
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            return conn
+        except Exception as e:
+            print(f"DB Connection failed: {e}")
+            return None
 
 def get_user_by_username(username):
     conn = get_db_connection()
-    user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-    conn.close()
-    return user
+    if not conn: return None
+    try:
+        user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        return user
+    finally:
+        conn.close()
 
 def create_user(username, email, password):
     conn = get_db_connection()
+    if not conn: return False
     try:
+        # Check if we can write (might fail on Vercel)
         conn.execute('INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
                      (username, email, password))
         conn.commit()
         return True
+    except sqlite3.OperationalError as e:
+        print(f"DB Write failed (likely Read-Only filesystem): {e}")
+        return False
     except sqlite3.IntegrityError:
         return False
     finally:
@@ -96,32 +104,56 @@ def create_user(username, email, password):
 
 def save_prediction(user_id, water_level, rain, soil_moisture, prediction, probability):
     conn = get_db_connection()
-    conn.execute('''
-        INSERT INTO predictions (user_id, water_level, rain, soil_moisture, prediction, probability)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (user_id, water_level, rain, soil_moisture, prediction, probability))
-    conn.commit()
-    conn.close()
+    if not conn: return
+    try:
+        conn.execute('''
+            INSERT INTO predictions (user_id, water_level, rain, soil_moisture, prediction, probability)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (user_id, water_level, rain, soil_moisture, prediction, probability))
+        conn.commit()
+    except Exception as e:
+        print(f"Save prediction failed: {e}")
+    finally:
+        conn.close()
 
 def get_user_predictions(user_id):
     conn = get_db_connection()
-    predictions = conn.execute(
-        'SELECT * FROM predictions WHERE user_id = ? ORDER BY created_at DESC',
-        (user_id,)
-    ).fetchall()
-    conn.close()
-    return predictions
+    if not conn: return []
+    try:
+        predictions = conn.execute(
+            'SELECT * FROM predictions WHERE user_id = ? ORDER BY created_at DESC',
+            (user_id,)
+        ).fetchall()
+        return predictions
+    finally:
+        conn.close()
 
 def delete_prediction(prediction_id, user_id):
     conn = get_db_connection()
-    conn.execute('DELETE FROM predictions WHERE id = ? AND user_id = ?', (prediction_id, user_id))
-    conn.commit()
-    conn.close()
+    if not conn: return
+    try:
+        conn.execute('DELETE FROM predictions WHERE id = ? AND user_id = ?', (prediction_id, user_id))
+        conn.commit()
+    except Exception as e:
+        print(f"Delete failed: {e}")
+    finally:
+        conn.close()
 
 # Routes
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/debug')
+def debug():
+    # Debug route to check status
+    status = {
+        "base_dir": BASE_DIR,
+        "db_exists": os.path.exists(DB_PATH),
+        "model_loaded": model is not None,
+        "files_in_outputs": os.listdir(os.path.join(BASE_DIR, 'outputs')) if os.path.exists(os.path.join(BASE_DIR, 'outputs')) else "outputs dir missing"
+    }
+    return jsonify(status)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -138,7 +170,7 @@ def register():
             flash('Registration successful! Please log in.', 'success')
             return redirect(url_for('login'))
         else:
-            flash('Registration failed!', 'error')
+            flash('Registration failed! (Note: Database might be read-only on Vercel)', 'error')
     
     return render_template('register.html')
 
@@ -187,16 +219,22 @@ def input_page():
     if 'user_id' not in session:
         flash('Please log in to make predictions.', 'warning')
         return redirect(url_for('login'))
-    import requests
-    data=requests.get("https://api.thingspeak.com/channels/3160477/feeds.json?api_key=25MC3O5UM2XY2YXW&results=2")
-    water=data.json()['feeds'][-1]['field1']
-    rain=data.json()['feeds'][-1]['field2']
-    soil=data.json()['feeds'][-1]['field3']
+    
+    water, rain, soil = 0, 0, 0
+    try:
+        import requests
+        # Add timeout to prevent hanging
+        data=requests.get("https://api.thingspeak.com/channels/3160477/feeds.json?api_key=25MC3O5UM2XY2YXW&results=2", timeout=5)
+        if data.status_code == 200:
+            feeds = data.json().get('feeds', [])
+            if feeds:
+                water=feeds[-1].get('field1', 0)
+                rain=feeds[-1].get('field2', 0)
+                soil=feeds[-1].get('field3', 0)
+    except Exception as e:
+        print(f"ThingSpeak error: {e}")
 
     return render_template('input.html', water=water, rain=rain, soil=soil)
-
-
-
 
 
 from flask import render_template, request, session, flash, redirect, url_for
@@ -207,24 +245,21 @@ def predict():
         flash('Please log in to make predictions.', 'warning')
         return redirect(url_for('login'))
     
+    # Reload model if missing (lazy load attempt)
+    if model is None:
+        load_models()
+        if model is None:
+             flash('Prediction model could not be loaded on server.', 'danger')
+             return redirect(url_for('input_page'))
+
     try:
         water_level = float(request.form['water_level'])
         rain = float(request.form['rain'])
         soil_moisture = float(request.form['soil_moisture'])
         
-        print(f"Received prediction request - Water: {water_level}, Rain: {rain}, Soil: {soil_moisture}")
-        
         # Validate inputs
         if water_level < 0 or water_level > 20:
             flash('Water level must be between 0 and 20.', 'danger')
-            return redirect(url_for('input_page'))
-        
-        if rain < 0 or rain > 4095:
-            flash('Rain sensor value must be between 0 and 4095.', 'danger')
-            return redirect(url_for('input_page'))
-        
-        if soil_moisture < 0 or soil_moisture > 4095:
-            flash('Soil moisture must be between 0 and 4095.', 'danger')
             return redirect(url_for('input_page'))
         
         # Prepare input for model
@@ -234,8 +269,6 @@ def predict():
         # Make prediction
         y_pred = model.predict(X_scaled)
         pred_label = label_encoder.inverse_transform(y_pred)[0]
-
-        print(f"Prediction result: {pred_label}")
 
         if soil_moisture > 3000:
             landslide_alert="High risk of landslide due to saturated soil. Take necessary precautions."
@@ -249,11 +282,18 @@ def predict():
         if hasattr(model, "predict_proba"):
             proba = model.predict_proba(X_scaled)[0]
             probability = float(max(proba))
-            print(f"Probability: {probability}")
         
         # Save prediction to database
         save_prediction(session['user_id'], water_level, rain, soil_moisture, pred_label, probability)
-        bot.sendMessage(ch_id,f"New Prediction:\nUser: {session['username']}\nWater Level: {water_level}\nRain: {rain}\nSoil Moisture: {soil_moisture}\nPrediction: {pred_label}\nProbability: {probability}\nLandslide Alert: {landslide_alert}")
+        
+        # Send telegram (lazy load bot)
+        try:
+           tb = get_bot()
+           if tb:
+               tb.sendMessage(ch_id,f"New Prediction:\nUser: {session['username']}\nWater Level: {water_level}\nRain: {rain}\nSoil Moisture: {soil_moisture}\nPrediction: {pred_label}\nProbability: {probability}\nLandslide Alert: {landslide_alert}")
+        except Exception as e:
+            print(f"Telegram failed: {e}")
+
         # Render result template with prediction data
         return render_template('result.html',
                              prediction=pred_label,
@@ -273,8 +313,6 @@ def result():
     flash('Please make a prediction first to see results.', 'warning')
     return redirect(url_for('input_page'))
 
-
-
 if __name__ == '__main__':
-    init_db()
+    # init_db() # Disabled for Vercel/Production to prevent overwrite/lock issues if not needed
     app.run(debug=True)
